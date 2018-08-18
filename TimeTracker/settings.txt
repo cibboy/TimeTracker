@@ -1,0 +1,1 @@
+﻿output=C:\Program Files\TimeTracker\interruptions-%date%.csv

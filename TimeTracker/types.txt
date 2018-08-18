@@ -1,0 +1,7 @@
+﻿Phone call
+Colleague approaching
+Meeting
+Chat
+Email
+Break
+Other
