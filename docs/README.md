@@ -25,4 +25,83 @@ As I said, use is pretty straightforward: run the application (which remains in 
 
 For the sake of simplicity, quitting the application is just a matter of double clicking the tray icon.
 
-Customization of the reason list and output file is done through simple text files.
+Customization of the list of readons and output file is done through simple text files.
+
+### Results
+I have tried the application for a couple of days and, except for getting used to the idea of pressing the shortcut every single time you get interrupted, it's pretty easy to use and provides useful insights on your work day and efficiency.
+
+I have developed a couple of Powershell scripts to better analyze stored data:
+
+##### Charting
+The first script converts the traditional csv output into a different csv file which is better suited to plot interruptions on a chart. Breaks are considered a no-working state (value = 0), interruptions are considered semi-working states (value = 1), the rest of the time is standard work (value = 2).
+
+Here is the script (you can download it [here](https://cibboy.github.io/TimeTracker/Convert-TimeTrackerData.ps1)):
+
+```powershell
+Param (
+    $InputFile,
+    $OutputFile
+)
+
+$csv = Import-Csv $InputFile -Header "Start", "End", "Type", "Notes"
+$res = @()
+$res += "DateTime,Value"
+foreach ($l in $csv) {
+    $val = 1
+    if ($l.Type -eq 'Break') {
+        $val = 0
+    }
+
+    $res += "$($l.Start),2"
+    $res += "$($l.Start),$val"
+    $res += "$($l.End),$val"
+    $res += "$($l.End),2"
+}
+$res | Out-File -FilePath $OutputFile
+```
+
+It takes as input the file produced by the application and a path for the processed file.
+
+Here is the chart produced by processing last Friday's interruptions:
+
+![Chart of interruptions](https://cibboy.github.io/TimeTracker/chart.png)
+
+#### Some numbers
+The second script analyzes the data produced by the application, and returns the total number of interruptions and the total interruption time. Breaks are not considered an interruption in this case.
+
+Here is the script (you can download it [here](https://cibboy.github.io/TimeTracker/Analyze-TimeTrackerData.ps1)):
+
+```powershell
+Param (
+    $InputFile
+)
+
+$csv = Import-Csv $InputFile -Header "Start", "End", "Type", "Notes"
+
+$total = 0
+$sum = [TimeSpan]::FromSeconds(0)
+
+foreach ($l in $csv) {
+    if ($l.Type -eq 'Break') {
+        continue
+    }
+
+    $start = Get-Date $l.Start
+    $end = Get-Date $l.End
+
+    $total++
+    $sum += ($end - $start)
+}
+
+Write-Output "Number of interruptions: $total"
+Write-Output "Total interruption time: $($sum.Hours) hours, $($sum.Minutes) minutes, $($sum.Seconds) seconds"
+```
+
+It takes as input the file produced by the application.
+
+Using the same input as the previous script, I found out that over my 7:30 hours of work, I had a total of 21 interruptions, summing up to 2 hours, 30 minutes and 57 seconds of total interruption time. Considering that last Friday was a summer day in which many people were on vacation (so, luckily, fewer interruptions!) and that after each interruption it takes some time to get back to your flow, the result is pretty shocking.
+
+As a test, I tried to modify the script to add 3 minutes after each interruption to account for time spent going back to your flow (please notice that this method is not properly working, as interruptions may be very close to each other), the sum soars up to 3 hours, 33 minutes and 57 seconds. Almost half of my working day was gone without full productivity.
+
+### Conclusion
+ Although tracking your interruptions does not solve the problem,it certainly helps in identifying it. This application is a tool which aids you in the recognition of the problem, setting the first stone of the path towards better productivity.
